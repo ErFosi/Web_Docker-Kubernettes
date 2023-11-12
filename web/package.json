@@ -1,0 +1,15 @@
+{
+  "name": "mi_web",
+  "version": "1.0.0",
+  "description": "Mi aplicación web de mensajería para el uso de docker y kubernettes",
+  "main": "app.js",
+  "dependencies": {
+    "express": "^4.17.1",
+    "mysql": "^2.18.1"
+  },
+  "scripts": {
+    "start": "node app.js"
+  },
+  "author": "Álvaro",
+  "license": "ISC"
+}

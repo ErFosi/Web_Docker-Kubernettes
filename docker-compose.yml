@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+
+  # Contenedor de MySQL
+  mysql:
+    image: mysql:latest
+    container_name: mysql_container
+    environment:
+      MYSQL_ROOT_PASSWORD: estoNoSeMira
+      MYSQL_DATABASE: mensajes
+      MYSQL_USER: web_admin
+      MYSQL_PASSWORD: admin_sistemas
+    ports:
+      - "3306:3306"
+    networks:
+      - my_network
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql   # Agrega esta línea
+
+  # Contenedor de tu sistema web
+  tu_sistema_web:
+    build: .
+    container_name: mi_web
+    ports:
+      - "3000:3000"
+    networks:
+      - my_network
+
+  # Contenedor de Mosquitto
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mosquitto_container
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    networks:
+      - my_network
+
+networks:
+  my_network:
+    driver: bridge
