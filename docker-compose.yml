@@ -16,7 +16,7 @@ services:
     networks:
       - my_network
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql   # Agrega esta línea
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql 
 
   # Contenedor de tu sistema web
   tu_sistema_web:
