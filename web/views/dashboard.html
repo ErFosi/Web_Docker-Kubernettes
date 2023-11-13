@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Dashboard</title>
-    <link rel="stylesheet" href="../public/css/style.css">
+    <link rel="stylesheet" href="/public/css/style.css">
 </head>
 <body>
     <h1>Bienvenido al Tablero de Mensajes</h1>
@@ -14,5 +14,12 @@
     </form>
     <button id="logout">Cerrar Sesión</button>
     <script src="../public/js/script.js"></script>
+
+    <form id="messagemqtt">
+        <label for="mqttServer">Servidor Mosquitto:</label>
+        <input type="text" id="mqttServer" value="localhost" required>
+        <input type="text" id="mqttMessage" placeholder="Escribe un mensaje..." required>
+        <button type="submit">Enviar MQTT</button>
+    </form>
 </body>
 </html>

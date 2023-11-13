@@ -1,5 +1,5 @@
+
 document.addEventListener('DOMContentLoaded', function () {
-    // Manejar el formulario de mensajes si está presente
     var messageForm = document.getElementById('messageForm');
     if (messageForm) {
         messageForm.addEventListener('submit', function (event) {
@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Manejar el formulario de inicio de sesión si está presente
     var loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', function (event) {
@@ -18,10 +17,18 @@ document.addEventListener('DOMContentLoaded', function () {
             var username = document.getElementById('loginUsername').value;
             var password = document.getElementById('loginPassword').value;
             handleLogin(username, password);
+            getMessages();
         });
     }
 
-    // Manejar el formulario de registro si está presente
+    var logoutButton = document.getElementById('logout');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', function (event) {
+            event.preventDefault();
+            handleLogout();
+        });
+    }
+
     var registerForm = document.getElementById('registerForm');
     if (registerForm) {
         registerForm.addEventListener('submit', function (event) {
@@ -31,6 +38,16 @@ document.addEventListener('DOMContentLoaded', function () {
             handleRegister(newUsername, newPassword);
         });
     }
+
+    var messageForm = document.getElementById('messagemqtt');
+    if (messageForm) {
+        messageForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            var messagemqtt = document.getElementById('mqttMessage').value;
+            sendMessageMqtt(messagemqtt);
+            document.getElementById('mqttMessage').value = '';
+        });
+}
 });
 
 
@@ -41,6 +58,28 @@ function sendMessage(message) {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({ mensaje: message })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sent) {
+                console.log('Mensaje enviado correctamente');
+                getMessages();
+            } else {
+                console.error('Error al enviar mensaje');
+            }
+        })
+        .catch(error => {
+            console.error('Error al enviar mensaje:', error);
+        });
+}
+function sendMessageMqtt(message) {
+    var server = document.getElementById('mqttServer').value;  // Obtener el valor del campo de servidor
+    fetch('/messagesMQTT', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ mensaje: message, server: server })  // Incluir la dirección IP del servidor en la solicitud
     })
         .then(response => response.json())
         .then(data => {
@@ -91,6 +130,7 @@ function handleLogin(username, password) {
         console.log('Respuesta del servidor:', data);
         if (data.loggedIn) {
             console.log('Inicio de sesión exitoso');
+            
             window.location.href = '/dashboard';
            
         } else {
@@ -134,4 +174,21 @@ function getLoggedInUser() {
         .catch(error => {
             console.error('Error al obtener usuario loggeado:', error);
         });
+}
+function handleLogout() {
+    fetch('/logout', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.loggedOut) {
+            console.log('Sesión cerrada correctamente');
+            window.location.href = '/login';
+        } else {
+            console.error('Error al cerrar sesión');
+        }
+    })
+    .catch(error => {
+        console.error('Error al cerrar sesión:', error);
+    });
 }

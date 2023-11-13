@@ -4,6 +4,7 @@ const mysql = require('mysql');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
 const path = require('path');
+const mqtt = require('mqtt');
 
 const dbConfig = {
     host: 'mysql', // El nombre del contenedor MySQL en la red Docker
@@ -34,14 +35,29 @@ const connectWithRetry = () => {
 
 // Iniciar la conexión con reintento
 connectWithRetry();
+const mqttClient = mqtt.connect('mqtt://mosquitto_container');  // Usa el nombre del contenedor Mosquitto
+mqttClient.subscribe('mensajes');
+mqttClient.on('message', (topic, message) => {
+    // Aquí puedes procesar el mensaje recibido y añadirlo a la base de datos con un usuario anónimo
+    console.log("Nuevo mensaje a traves de mqtt!!")
+    const mensaje = message.toString(); // Convierte el mensaje a cadena si es necesario
+    const autorAnonimo = 'Anónimo';
 
+    // Añadir el mensaje a la base de datos
+    db.query('INSERT INTO mensajes (autor, mensaje) VALUES (?, ?)', [autorAnonimo, mensaje], (err, results) => {
+        if (err) {
+            console.error('Error al añadir mensaje a la base de datos:', err);
+        } else {
+            console.log('Mensaje añadido a la base de datos:', mensaje);
+        }
+    });
+});
 app.use(session({
     secret: 'tu_secreto', // Cambia esto a una cadena segura
     resave: false,
     saveUninitialized: true,
     cookie: { maxAge: 60 * 60 * 1000 } // 1 hora en milisegundos
 }));
-
 app.use(express.json());
 app.use('/public', express.static('public'));
 app.use(express.static('public'));
@@ -135,11 +151,13 @@ app.post('/messages', (req, res) => {
     const loggedInUser = req.session.loggedInUser;
 
     if (!loggedInUser) {
+        res.redirect('/login');
         return res.status(401).json({ sent: false, message: 'Usuario no autenticado' });
     }
 
     db.query('INSERT INTO mensajes (autor, mensaje) VALUES (?, ?)', [loggedInUser, mensaje], (err, results) => {
         if (err) {
+            console.log([loggedInUser, mensaje])
             console.error('Error al enviar mensaje:', err);
             res.status(500).json({ sent: false, message: 'Error interno del servidor' });
         } else {
@@ -152,12 +170,9 @@ app.get('/getLoggedInUser', (req, res) => {
     res.json({ username: loggedInUser });
 });
 
-// Ruta para cerrar sesión
-app.post('/logout', (req, res) => {
-    loggedInUser = null; // Limpiar el nombre de usuario almacenado
-    res.json({ loggedOut: true });
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views', 'login.html'));
 });
-
 // Definir ruta para la página principal (inicio de sesión / registro)
 app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'login.html'));
@@ -172,6 +187,52 @@ app.get('/dashboard', (req, res) => {
         // Si no hay una sesión iniciada, redirigir al inicio de sesión u otra página
         res.redirect('/login'); // Puedes ajustar esto según tus necesidades
     }
+});
+
+app.post('/logout', (req, res) => {
+    // Limpiar la sesión
+    loggedInUser=null
+    req.session.destroy(err => {
+        if (err) {
+            console.error('Error al cerrar sesión:', err);
+            res.json({ loggedOut: false });
+        } else {
+            res.json({ loggedOut: true });
+        }
+    });
+});
+app.post('/messagesMQTT', (req, res) => {
+    const { mensaje, server } = req.body;
+    console.log("Intentando conectar al servidor MQTT...");
+
+    // Crea un nuevo cliente MQTT para cada solicitud
+    const mqttClientLocal = mqtt.connect(`mqtt://${server}`);
+
+    // Verifica la conexión al servidor MQTT
+    mqttClientLocal.on('connect', () => {
+        console.log("Conectado al servidor MQTT");
+        
+        // Publica el mensaje en el tópico 'mensajes' del servidor MQTT
+        mqttClientLocal.publish('mensajes', mensaje, (error) => {
+            if (error) {
+                console.error('Error al enviar mensaje MQTT:', error);
+                res.json({ sent: false });
+            } else {
+                console.log('Mensaje MQTT enviado correctamente');
+                res.json({ sent: true });
+            }
+
+            // Desconecta el cliente después de usarlo
+            mqttClientLocal.end();
+        });
+    });
+
+    // Maneja los errores de conexión al servidor MQTT
+    mqttClientLocal.on('error', (error) => {
+        console.error('Error al conectar al servidor MQTT:', error);
+        console.log("No se ha podido conectar al servidor MQTT");
+        res.json({ sent: false });
+    });
 });
 
 app.listen(3000, () => {
