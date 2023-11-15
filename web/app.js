@@ -171,6 +171,7 @@ app.get('/getLoggedInUser', (req, res) => {
 });
 
 app.get('/', (req, res) => {
+    console.log("redireccionado a login")
     res.sendFile(path.join(__dirname, 'views', 'login.html'));
 });
 // Definir ruta para la página principal (inicio de sesión / registro)
@@ -202,38 +203,48 @@ app.post('/logout', (req, res) => {
     });
 });
 app.post('/messagesMQTT', (req, res) => {
-    const { mensaje, server } = req.body;
-    console.log("Intentando conectar al servidor MQTT...");
+    try {
+        const { mensaje, server } = req.body;
+        console.log("Intentando conectar al servidor MQTT...");
 
-    // Crea un nuevo cliente MQTT para cada solicitud
-    const mqttClientLocal = mqtt.connect(`mqtt://${server}`);
+        // Ajuste para redirigir a Mosquitto interno si server es localhost
+        const mqttServer = (server === 'localhost') ? 'mosquitto' : server;
+        //mqttServer = (server === '127.0.0.1') ? 'mosquitto' : server;
+        // Crea un nuevo cliente MQTT para cada solicitud
+        const mqttClientLocal = mqtt.connect(`mqtt://${mqttServer}`);
 
-    // Verifica la conexión al servidor MQTT
-    mqttClientLocal.on('connect', () => {
-        console.log("Conectado al servidor MQTT");
-        
-        // Publica el mensaje en el tópico 'mensajes' del servidor MQTT
-        mqttClientLocal.publish('mensajes', mensaje, (error) => {
-            if (error) {
-                console.error('Error al enviar mensaje MQTT:', error);
-                res.json({ sent: false });
-            } else {
-                console.log('Mensaje MQTT enviado correctamente');
-                res.json({ sent: true });
-            }
+        // Verifica la conexión al servidor MQTT
+        mqttClientLocal.on('connect', () => {
+            console.log("Conectado al servidor MQTT");
 
-            // Desconecta el cliente después de usarlo
-            mqttClientLocal.end();
+            // Publica el mensaje en el tópico 'mensajes' del servidor MQTT
+            mqttClientLocal.publish('mensajes', mensaje, (error) => {
+                if (error) {
+                    console.error('Error al enviar mensaje MQTT:', error);
+                    res.json({ sent: false });
+                } else {
+                    console.log('Mensaje MQTT enviado correctamente');
+                    res.json({ sent: true });
+                }
+
+                // Desconecta el cliente después de usarlo
+                mqttClientLocal.end();
+            });
         });
-    });
 
-    // Maneja los errores de conexión al servidor MQTT
-    mqttClientLocal.on('error', (error) => {
-        console.error('Error al conectar al servidor MQTT:', error);
-        console.log("No se ha podido conectar al servidor MQTT");
-        res.json({ sent: false });
-    });
+        // Maneja los errores de conexión al servidor MQTT
+        mqttClientLocal.on('error', (error) => {
+            console.error('Error al conectar al servidor MQTT:', error);
+            console.log("No se ha podido conectar al servidor MQTT");
+            res.json({ sent: false });
+        });
+
+    } catch (error) {
+        console.error('Error en el manejo del mensaje MQTT:', error);
+        res.json({ sent: false, error: error.message });
+    }
 });
+
 
 app.listen(3000, () => {
     console.log('Servidor iniciado en http://localhost:3000');

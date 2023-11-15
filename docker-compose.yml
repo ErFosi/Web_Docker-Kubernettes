@@ -26,7 +26,6 @@ services:
       - "3000:3000"
     networks:
       - my_network
-
   # Contenedor de Mosquitto
   mosquitto:
     image: eclipse-mosquitto
@@ -36,6 +35,9 @@ services:
       - "9001:9001"
     networks:
       - my_network
+    volumes:
+      - ./mosquitto.conf:/mosquitto.conf
+    command: mosquitto -c /mosquitto.conf
 
 networks:
   my_network:
