@@ -115,7 +115,7 @@ function showMessages(messages) {
 
     messages.forEach(function (message) {
         var messageDiv = document.createElement('div');
-        messageDiv.innerHTML = '<strong>' + message.autor + ':</strong> ' + message.mensaje;
+        messageDiv.innerHTML = `<strong>${message.autor}:</strong> ${message.mensaje} - Sentimiento: ${message.sentimiento}`;
         messagesElement.appendChild(messageDiv);
     });
 }

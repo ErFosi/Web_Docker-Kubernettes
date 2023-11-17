@@ -30,7 +30,15 @@ services:
     depends_on:
       - mysql
       - mosquitto
-
+ # Contenedor de tu aplicación Python con Flask
+  sentimentalist:
+    build:
+      context: ./sentiment  # Asegúrate de que el Dockerfile está en esta carpeta
+    container_name: sentimentalist_container
+    networks:
+      - my_network
+    depends_on:
+      - mensajesas
   # Contenedor de Mosquitto
   mosquitto:
     image: eclipse-mosquitto
@@ -62,12 +70,6 @@ services:
       - mysql
     ports:
       - "8081:80"
-
-  sentimentalist:
-    image: pachyderm/sentimentalist
-    container_name: sentimentalist_container
-    networks:
-      - my_network
 
   # ... (otros servicios)
   # Contenedor de Traefik

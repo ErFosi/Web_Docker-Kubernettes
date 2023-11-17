@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 const path = require('path');
 const mqtt = require('mqtt');
+const axios = require('axios'); 
 
 const dbConfig = {
     host: 'mysql', // El nombre del contenedor MySQL en la red Docker
@@ -71,6 +72,14 @@ mqttClient.on('message', (topic, message) => {
         console.error('Error al procesar el mensaje MQTT:', error);
     }
 });
+const analyzeSentiment = async (message) => {
+    return axios.post('http://sentimentalist_container:5000/analyze_sentiment', { message })
+        .then(response => response.data.sentiment)
+        .catch(error => {
+            console.error('Error al enviar mensaje a Python:', error);
+            return 'error';
+        });
+};
 app.use(session({
     secret: 'tu_secreto', // Cambia esto a una cadena segura
     resave: false,
@@ -81,7 +90,7 @@ app.use(express.json());
 app.use('/mensajesas/public', express.static('public'));
 app.use(express.static('public'));
 // Ruta para autenticar usuario
-app.post('/mensajesAS/login', async (req, res) => {
+app.post('/mensajesas/login', async (req, res) => {
     const { username, password } = req.body;
     const sql = 'SELECT * FROM usuarios WHERE usuario = ?';
 
@@ -125,7 +134,7 @@ app.post('/mensajesAS/login', async (req, res) => {
 
 
 // Ruta para registrar un nuevo usuario
-app.post('/mensajesAs/register', async (req, res) => {
+app.post('/mensajesas/register', async (req, res) => {
     const { username, password } = req.body;
 
     // Verificar que la contraseña tenga al menos 6 caracteres
@@ -167,7 +176,7 @@ app.post('/mensajesAs/register', async (req, res) => {
 });
 
 // Ruta para obtener mensajes
-app.get('/mensajesAs/messages', (req, res) => {
+app.get('/mensajesas/messages', (req, res) => {
     db.query('SELECT * FROM mensajes', (err, results) => {
         if (err) {
             console.error('Error al obtener mensajes:', err);
@@ -179,7 +188,8 @@ app.get('/mensajesAs/messages', (req, res) => {
 });
 
 // Ruta para enviar mensajes
-app.post('/mensajesas/messages', (req, res) => {
+// Ruta para enviar mensajes
+app.post('/mensajesas/messages', async (req, res) => {
     const { mensaje } = req.body;
     const loggedInUser = req.session.loggedInUser;
 
@@ -188,16 +198,25 @@ app.post('/mensajesas/messages', (req, res) => {
         return res.status(401).json({ sent: false, message: 'Usuario no autenticado' });
     }
 
-    db.query('INSERT INTO mensajes (autor, mensaje) VALUES (?, ?)', [loggedInUser, mensaje], (err, results) => {
-        if (err) {
-            console.log([loggedInUser, mensaje])
-            console.error('Error al enviar mensaje:', err);
-            res.status(500).json({ sent: false, message: 'Error interno del servidor' });
-        } else {
-            res.json({ sent: true });
-        }
-    });
+    try {
+        // Analizar el sentimiento del mensaje
+        const sentiment = await analyzeSentiment(mensaje);
+
+        // Añadir el mensaje y el sentimiento a la base de datos MySQL
+        db.query('INSERT INTO mensajes (autor, mensaje, sentimiento) VALUES (?, ?, ?)', [loggedInUser, mensaje, sentiment], (err, results) => {
+            if (err) {
+                console.error('Error al enviar mensaje a la base de datos:', err);
+                res.status(500).json({ sent: false, message: 'Error interno del servidor' });
+            } else {
+                res.json({ sent: true, result: sentiment });
+            }
+        });
+    } catch (error) {
+        console.error('Error al procesar el mensaje:', error);
+        res.status(500).json({ sent: false, message: 'Error interno del servidor' });
+    }
 });
+
 // Ruta para obtener el usuario loggeado
 app.get('/mensajesas/getLoggedInUser', (req, res) => {
     res.json({ username: loggedInUser });
