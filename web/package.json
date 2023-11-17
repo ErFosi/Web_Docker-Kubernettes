@@ -8,7 +8,8 @@
     "mysql": "^2.18.1",
     "bcrypt": "^5.0.0",
     "express-session": "^1.17.2", 
-    "mqtt": "^4.2.6" 
+    "mqtt": "^4.2.6",
+    "axios": "^0.24.0"
   },
   "scripts": {
     "start": "node app.js"

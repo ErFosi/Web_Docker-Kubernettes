@@ -29,6 +29,16 @@ const connectWithRetry = () => {
             console.log('Conexión a la base de datos exitosa');
             const sql = 'INSERT INTO usuarios (usuario, contrasena) VALUES (?, ?)';
             db.query(sql, ["test", "test"], (err, result) => {});
+    
+            // Consulta la base de datos para obtener todos los mensajes
+            const getMessagesSQL = 'SELECT * FROM mensajes';
+            db.query(getMessagesSQL, (err, messages) => {
+                if (err) {
+                    console.error('Error al obtener mensajes de la base de datos:', err);
+                } else {
+                    console.log('Mensajes cargados al iniciar la aplicación:', messages);
+                }
+            });
         }
     });
 };
@@ -38,19 +48,28 @@ connectWithRetry();
 const mqttClient = mqtt.connect('mqtt://mosquitto_container');  // Usa el nombre del contenedor Mosquitto
 mqttClient.subscribe('mensajes');
 mqttClient.on('message', (topic, message) => {
-    // Aquí puedes procesar el mensaje recibido y añadirlo a la base de datos con un usuario anónimo
-    console.log("Nuevo mensaje a traves de mqtt!!")
-    const mensaje = message.toString(); // Convierte el mensaje a cadena si es necesario
-    const autorAnonimo = 'Anónimo';
+    try {
+        // Convierte el mensaje a cadena si es necesario
+        const mensajeString = message.toString();
+        console.log("Nuevo mensaje a través de MQTT:", mensajeString);
 
-    // Añadir el mensaje a la base de datos
-    db.query('INSERT INTO mensajes (autor, mensaje) VALUES (?, ?)', [autorAnonimo, mensaje], (err, results) => {
-        if (err) {
-            console.error('Error al añadir mensaje a la base de datos:', err);
-        } else {
-            console.log('Mensaje añadido a la base de datos:', mensaje);
-        }
-    });
+        // Extrae el usuario y el mensaje del formato "usuario: mensaje"
+        const [usuario, mensaje] = mensajeString.split(': ');
+
+        // Añade el sufijo "MQTT" al nombre de usuario MQTT
+        const usuarioConSufijo = `${usuario}MQTT`;
+
+        // Añade el mensaje a la base de datos con el usuario correspondiente
+        db.query('INSERT INTO mensajes (autor, mensaje) VALUES (?, ?)', [usuarioConSufijo, mensaje], (err, results) => {
+            if (err) {
+                console.error('Error al añadir mensaje a la base de datos:', err);
+            } else {
+                console.log('Mensaje añadido a la base de datos:', mensaje);
+            }
+        });
+    } catch (error) {
+        console.error('Error al procesar el mensaje MQTT:', error);
+    }
 });
 app.use(session({
     secret: 'tu_secreto', // Cambia esto a una cadena segura
@@ -59,10 +78,10 @@ app.use(session({
     cookie: { maxAge: 60 * 60 * 1000 } // 1 hora en milisegundos
 }));
 app.use(express.json());
-app.use('/public', express.static('public'));
+app.use('/mensajesas/public', express.static('public'));
 app.use(express.static('public'));
 // Ruta para autenticar usuario
-app.post('/login', async (req, res) => {
+app.post('/mensajesAS/login', async (req, res) => {
     const { username, password } = req.body;
     const sql = 'SELECT * FROM usuarios WHERE usuario = ?';
 
@@ -106,7 +125,7 @@ app.post('/login', async (req, res) => {
 
 
 // Ruta para registrar un nuevo usuario
-app.post('/register', async (req, res) => {
+app.post('/mensajesAs/register', async (req, res) => {
     const { username, password } = req.body;
 
     // Verificar que la contraseña tenga al menos 6 caracteres
@@ -114,27 +133,41 @@ app.post('/register', async (req, res) => {
         return res.json({ registered: false, message: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
-    // Generar el hash de la contraseña
-    try {
-        const hashedPassword = await bcrypt.hash(password, 10);
+    // Verificar si el usuario ya existe en la base de datos
+    const checkUserQuery = 'SELECT * FROM usuarios WHERE usuario = ?';
+    db.query(checkUserQuery, [username], async (checkErr, checkResults) => {
+        if (checkErr) {
+            console.error('Error al verificar si el usuario existe:', checkErr);
+            return res.json({ registered: false });
+        }
 
-        const sql = 'INSERT INTO usuarios (usuario, contrasena) VALUES (?, ?)';
-        db.query(sql, [username, hashedPassword], (err, result) => {
-            if (err) {
-                console.error('Error al registrar usuario:', err);
-                res.json({ registered: false });
-            } else {
-                res.json({ registered: true });
-            }
-        });
-    } catch (error) {
-        console.error('Error al hashear la contraseña:', error);
-        res.json({ registered: false });
-    }
+        // Si el usuario ya existe, devuelve un mensaje indicándolo
+        if (checkResults.length > 0) {
+            return res.json({ registered: false, message: 'El usuario ya está registrado' });
+        }
+
+        // Generar el hash de la contraseña y registrar al usuario
+        try {
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            const registerUserQuery = 'INSERT INTO usuarios (usuario, contrasena) VALUES (?, ?)';
+            db.query(registerUserQuery, [username, hashedPassword], (registerErr, result) => {
+                if (registerErr) {
+                    console.error('Error al registrar usuario:', registerErr);
+                    res.json({ registered: false });
+                } else {
+                    res.json({ registered: true });
+                }
+            });
+        } catch (error) {
+            console.error('Error al hashear la contraseña:', error);
+            res.json({ registered: false });
+        }
+    });
 });
 
 // Ruta para obtener mensajes
-app.get('/messages', (req, res) => {
+app.get('/mensajesAs/messages', (req, res) => {
     db.query('SELECT * FROM mensajes', (err, results) => {
         if (err) {
             console.error('Error al obtener mensajes:', err);
@@ -146,12 +179,12 @@ app.get('/messages', (req, res) => {
 });
 
 // Ruta para enviar mensajes
-app.post('/messages', (req, res) => {
+app.post('/mensajesas/messages', (req, res) => {
     const { mensaje } = req.body;
     const loggedInUser = req.session.loggedInUser;
 
     if (!loggedInUser) {
-        res.redirect('/login');
+        res.redirect('/mensajesaslogin');
         return res.status(401).json({ sent: false, message: 'Usuario no autenticado' });
     }
 
@@ -166,31 +199,32 @@ app.post('/messages', (req, res) => {
     });
 });
 // Ruta para obtener el usuario loggeado
-app.get('/getLoggedInUser', (req, res) => {
+app.get('/mensajesas/getLoggedInUser', (req, res) => {
     res.json({ username: loggedInUser });
 });
 
-app.get('/', (req, res) => {
+app.get('/mensajesas/', (req, res) => {
     console.log("redireccionado a login")
     res.sendFile(path.join(__dirname, 'views', 'login.html'));
 });
 // Definir ruta para la página principal (inicio de sesión / registro)
-app.get('/login', (req, res) => {
+app.get('/mensajesas/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'login.html'));
 });
 // Ruta para el dashboard
-app.get('/dashboard', (req, res) => {
+app.get('/mensajesas/dashboard', (req, res) => {
     // Verificar si hay una sesión iniciada
     if (req.session.loggedInUser) {
         // Si hay una sesión iniciada, redirigir al dashboard
+        console.log("Se va a dashboard")
         res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
     } else {
         // Si no hay una sesión iniciada, redirigir al inicio de sesión u otra página
-        res.redirect('/login'); // Puedes ajustar esto según tus necesidades
+        res.redirect('/mensajesas/login'); // Puedes ajustar esto según tus necesidades
     }
 });
 
-app.post('/logout', (req, res) => {
+app.post('/mensajesas/logout', (req, res) => {
     // Limpiar la sesión
     loggedInUser=null
     req.session.destroy(err => {
@@ -202,13 +236,13 @@ app.post('/logout', (req, res) => {
         }
     });
 });
-app.post('/messagesMQTT', (req, res) => {
+app.post('/mensajesas/messagesMQTT', (req, res) => {
     try {
-        const { mensaje, server } = req.body;
+        const { mensaje, server, loggedInUser } = req.body;
         console.log("Intentando conectar al servidor MQTT...");
 
         // Ajuste para redirigir a Mosquitto interno si server es localhost
-        const mqttServer = (server === 'localhost') ? 'mosquitto' : server;
+        const mqttServer = (server === 'localhost' || server === '127.0.0.1') ? 'mosquitto' : server;
         //mqttServer = (server === '127.0.0.1') ? 'mosquitto' : server;
         // Crea un nuevo cliente MQTT para cada solicitud
         const mqttClientLocal = mqtt.connect(`mqtt://${mqttServer}`);
@@ -216,9 +250,12 @@ app.post('/messagesMQTT', (req, res) => {
         // Verifica la conexión al servidor MQTT
         mqttClientLocal.on('connect', () => {
             console.log("Conectado al servidor MQTT");
+            usuario=req.session.loggedInUser;
+            // Construye el mensaje MQTT que incluye el usuario y el mensaje
+            const mensajeCompleto = `${usuario}: ${mensaje}`;
 
             // Publica el mensaje en el tópico 'mensajes' del servidor MQTT
-            mqttClientLocal.publish('mensajes', mensaje, (error) => {
+            mqttClientLocal.publish('mensajes', mensajeCompleto, (error) => {
                 if (error) {
                     console.error('Error al enviar mensaje MQTT:', error);
                     res.json({ sent: false });
@@ -231,17 +268,9 @@ app.post('/messagesMQTT', (req, res) => {
                 mqttClientLocal.end();
             });
         });
-
-        // Maneja los errores de conexión al servidor MQTT
-        mqttClientLocal.on('error', (error) => {
-            console.error('Error al conectar al servidor MQTT:', error);
-            console.log("No se ha podido conectar al servidor MQTT");
-            res.json({ sent: false });
-        });
-
     } catch (error) {
-        console.error('Error en el manejo del mensaje MQTT:', error);
-        res.json({ sent: false, error: error.message });
+        console.error('Error en la solicitud /messagesMQTT:', error);
+        res.json({ sent: false });
     }
 });
 

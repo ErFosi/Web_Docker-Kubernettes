@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
 
@@ -11,33 +11,80 @@ services:
       MYSQL_DATABASE: mensajes
       MYSQL_USER: web_admin
       MYSQL_PASSWORD: admin_sistemas
-    ports:
-      - "3306:3306"
     networks:
       - my_network
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql 
 
-  # Contenedor de tu sistema web
-  tu_sistema_web:
+  # Contenedor de tu sistema web (Node.js)
+  mensajesas:
     build: .
-    container_name: mi_web
-    ports:
-      - "3000:3000"
+    container_name: mensajesas
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mensajesas.rule=PathPrefix(`/mensajesas`)"
+      - "traefik.http.services.mensajesas.loadbalancer.server.port=3000"
+
     networks:
       - my_network
+    depends_on:
+      - mysql
+      - mosquitto
+
   # Contenedor de Mosquitto
   mosquitto:
     image: eclipse-mosquitto
     container_name: mosquitto_container
-    ports:
-      - "1883:1883"
-      - "9001:9001"
+    links:
+      - mysql
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mosquitto.rule=PathPrefix(`/mosquitto`)"
+      - "traefik.http.services.mosquitto.loadbalancer.server.port=1883"
     networks:
       - my_network
     volumes:
       - ./mosquitto.conf:/mosquitto.conf
     command: mosquitto -c /mosquitto.conf
+
+  # Contenedor de PHPMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin_container
+    environment:
+      PMA_ARBITRARY: 1
+      PMA_HOST: mysql
+      PMA_USER: web_admin
+      PMA_PASSWORD: admin_sistemas
+    networks:
+      - my_network
+    depends_on:
+      - mysql
+    ports:
+      - "8081:80"
+
+  sentimentalist:
+    image: pachyderm/sentimentalist
+    container_name: sentimentalist_container
+    networks:
+      - my_network
+
+  # ... (otros servicios)
+  # Contenedor de Traefik
+  traefik:
+    image: traefik:v2.5
+    container_name: traefik_container
+    ports:
+      - "80:80"
+      - "8080:8080"
+    networks:
+      - my_network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
 
 networks:
   my_network:

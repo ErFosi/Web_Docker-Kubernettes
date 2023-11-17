@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', function () {
             var username = document.getElementById('loginUsername').value;
             var password = document.getElementById('loginPassword').value;
             handleLogin(username, password);
-            getMessages();
         });
     }
 
@@ -39,20 +38,24 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    var messageForm = document.getElementById('messagemqtt');
-    if (messageForm) {
-        messageForm.addEventListener('submit', function (event) {
+    var messageMqttForm = document.getElementById('messagemqtt');
+    if (messageMqttForm) {
+        messageMqttForm.addEventListener('submit', function (event) {
             event.preventDefault();
             var messagemqtt = document.getElementById('mqttMessage').value;
             sendMessageMqtt(messagemqtt);
             document.getElementById('mqttMessage').value = '';
         });
-}
+    }
+
+    // Llama a la función para obtener y mostrar mensajes al cargar el dashboard
+    getMessages();
 });
 
 
+
 function sendMessage(message) {
-    fetch('/messages', {
+    fetch('/mensajesas/messages', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -74,12 +77,12 @@ function sendMessage(message) {
 }
 function sendMessageMqtt(message) {
     var server = document.getElementById('mqttServer').value;  // Obtener el valor del campo de servidor
-    fetch('/messagesMQTT', {
+    fetch('/mensajesas/messagesMQTT', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ mensaje: message, server: server })  // Incluir la dirección IP del servidor en la solicitud
+        body: JSON.stringify({ mensaje: message, server: server })
     })
         .then(response => response.json())
         .then(data => {
@@ -96,7 +99,7 @@ function sendMessageMqtt(message) {
 }
 
 function getMessages() {
-    fetch('/messages')
+    fetch('/mensajesas/messages')
         .then(response => response.json())
         .then(data => {
             showMessages(data);
@@ -117,8 +120,9 @@ function showMessages(messages) {
     });
 }
 
+
 function handleLogin(username, password) {
-    fetch('/login', {
+    fetch('/mensajesas/login', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -130,43 +134,49 @@ function handleLogin(username, password) {
         console.log('Respuesta del servidor:', data);
         if (data.loggedIn) {
             console.log('Inicio de sesión exitoso');
-            
-            window.location.href = '/dashboard';
-           
+            handleDashboard();
         } else {
-            console.error('Error al iniciar sesión');
+            console.error('Error al iniciar sesión:', data.message);
+            // Muestra el mensaje de error en la interfaz de usuario, por ejemplo, mediante una alerta
+            alert('Error al iniciar sesión: ' + data.message);
         }
     })
     .catch(error => {
         console.error('Error al iniciar sesión:', error);
+        // Muestra el mensaje de error en la interfaz de usuario, por ejemplo, mediante una alerta
+        alert('Error al iniciar sesión. Por favor, intenta de nuevo.');
     });
 }
 
 function handleRegister(username, password) {
-    fetch('/register', {
+    fetch('/mensajesas/register', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({ username, password })
     })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Respuesta del servidor:', data);
-            if (data.registered) {
-                console.log('Registro exitoso');
-                handleLogin(username, password); 
-            } else {
-                console.error('Error al registrar');
-            }
-        })
-        .catch(error => {
-            console.error('Error al registrar:', error);
-        });
+    .then(response => response.json())
+    .then(data => {
+        console.log('Respuesta del servidor:', data);
+        if (data.registered) {
+            console.log('Registro exitoso');
+            handleLogin(username, password);
+        } else {
+            console.error('Error al registrar:', data.message);
+            // Muestra el mensaje de error en la interfaz de usuario, por ejemplo, mediante una alerta
+            alert('Error al registrar: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error al registrar:', error);
+        // Muestra el mensaje de error en la interfaz de usuario, por ejemplo, mediante una alerta
+        alert('Error al registrar. Por favor, intenta de nuevo.');
+    });
 }
 
 function getLoggedInUser() {
-    fetch('/getLoggedInUser')
+    fetch('/mensajesas/getLoggedInUser')
         .then(response => response.json())
         .then(data => {
             console.log('Usuario loggeado:', data.username);
@@ -175,8 +185,9 @@ function getLoggedInUser() {
             console.error('Error al obtener usuario loggeado:', error);
         });
 }
+
 function handleLogout() {
-    fetch('/logout', {
+    fetch('/mensajesas/logout', {
         method: 'POST'
     })
     .then(response => response.json())
@@ -191,4 +202,20 @@ function handleLogout() {
     .catch(error => {
         console.error('Error al cerrar sesión:', error);
     });
+}
+function handleDashboard() {
+    // Realizar la solicitud al servidor para obtener el contenido del dashboard
+    fetch('/mensajesas/dashboard')
+        .then(response => response.text())
+        .then(html => {
+            // Limpiar el contenido actual del cuerpo de la página
+            document.open();
+            document.write(html);
+            document.close();
+
+            // Resto del código o lógica adicional del dashboard, si es necesario
+        })
+        .catch(error => {
+            console.error('Error al obtener contenido del dashboard:', error);
+        });
 }
