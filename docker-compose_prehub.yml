@@ -18,7 +18,7 @@ services:
 
   # Contenedor de tu sistema web (Node.js)
   mensajesas:
-    image: erfosi/administracion_mensajesas:latest
+    build: .
     container_name: mensajesas
     labels:
       - "traefik.enable=true"
@@ -32,7 +32,8 @@ services:
       - mosquitto
  # Contenedor de tu aplicación Python con Flask
   sentimentalist:
-    image: erfosi/administracion_sentimentalist:latest 
+    build:
+      context: ./sentiment  # Asegúrate de que el Dockerfile está en esta carpeta
     container_name: sentimentalist_container
     networks:
       - my_network

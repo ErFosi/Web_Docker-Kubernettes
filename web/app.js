@@ -48,26 +48,42 @@ const connectWithRetry = () => {
 connectWithRetry();
 const mqttClient = mqtt.connect('mqtt://mosquitto_container');  // Usa el nombre del contenedor Mosquitto
 mqttClient.subscribe('mensajes');
-mqttClient.on('message', (topic, message) => {
+mqttClient.on('message', async (topic, message) => {
     try {
-        // Convierte el mensaje a cadena si es necesario
         const mensajeString = message.toString();
         console.log("Nuevo mensaje a través de MQTT:", mensajeString);
 
-        // Extrae el usuario y el mensaje del formato "usuario: mensaje"
         const [usuario, mensaje] = mensajeString.split(': ');
-
-        // Añade el sufijo "MQTT" al nombre de usuario MQTT
         const usuarioConSufijo = `${usuario}MQTT`;
 
-        // Añade el mensaje a la base de datos con el usuario correspondiente
-        db.query('INSERT INTO mensajes (autor, mensaje) VALUES (?, ?)', [usuarioConSufijo, mensaje], (err, results) => {
-            if (err) {
-                console.error('Error al añadir mensaje a la base de datos:', err);
-            } else {
-                console.log('Mensaje añadido a la base de datos:', mensaje);
-            }
-        });
+        // Inicia el bloque try-catch para el análisis de sentimiento
+        try {
+            // Analizar el sentimiento del mensaje
+            const sentiment = await analyzeSentiment(mensaje);
+
+            // Añadir el mensaje y el sentimiento a la base de datos MySQL
+            db.query('INSERT INTO mensajes (autor, mensaje, sentimiento) VALUES (?, ?, ?)', [usuarioConSufijo, mensaje, sentiment], (err, results) => {
+                if (err) {
+                    console.error('Error al añadir mensaje a la base de datos:', err);
+                } else {
+                    console.log('Mensaje añadido a la base de datos:', mensaje);
+                }
+            });
+        } catch (error) {
+            console.error('Error al analizar el sentimiento:', error);
+
+            // Puedes establecer el sentimiento a null en caso de error
+            const sentiment = null;
+
+            // Añadir el mensaje (con sentimiento nulo) a la base de datos MySQL
+            db.query('INSERT INTO mensajes (autor, mensaje, sentimiento) VALUES (?, ?, ?)', [usuarioConSufijo, mensaje, sentiment], (err, results) => {
+                if (err) {
+                    console.error('Error al añadir mensaje a la base de datos:', err);
+                } else {
+                    console.log('Mensaje añadido a la base de datos con sentimiento nulo:', mensaje);
+                }
+            });
+        }
     } catch (error) {
         console.error('Error al procesar el mensaje MQTT:', error);
     }
@@ -87,10 +103,10 @@ app.use(session({
     cookie: { maxAge: 60 * 60 * 1000 } // 1 hora en milisegundos
 }));
 app.use(express.json());
-app.use('/mensajesas/public', express.static('public'));
+app.use('/public', express.static('public'));
 app.use(express.static('public'));
 // Ruta para autenticar usuario
-app.post('/mensajesas/login', async (req, res) => {
+app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const sql = 'SELECT * FROM usuarios WHERE usuario = ?';
 
@@ -134,7 +150,7 @@ app.post('/mensajesas/login', async (req, res) => {
 
 
 // Ruta para registrar un nuevo usuario
-app.post('/mensajesas/register', async (req, res) => {
+app.post('/register', async (req, res) => {
     const { username, password } = req.body;
 
     // Verificar que la contraseña tenga al menos 6 caracteres
@@ -176,7 +192,7 @@ app.post('/mensajesas/register', async (req, res) => {
 });
 
 // Ruta para obtener mensajes
-app.get('/mensajesas/messages', (req, res) => {
+app.get('/messages', (req, res) => {
     db.query('SELECT * FROM mensajes', (err, results) => {
         if (err) {
             console.error('Error al obtener mensajes:', err);
@@ -189,12 +205,12 @@ app.get('/mensajesas/messages', (req, res) => {
 
 // Ruta para enviar mensajes
 // Ruta para enviar mensajes
-app.post('/mensajesas/messages', async (req, res) => {
+app.post('/messages', async (req, res) => {
     const { mensaje } = req.body;
     const loggedInUser = req.session.loggedInUser;
 
     if (!loggedInUser) {
-        res.redirect('/mensajesaslogin');
+        res.redirect('/login');
         return res.status(401).json({ sent: false, message: 'Usuario no autenticado' });
     }
 
@@ -218,20 +234,20 @@ app.post('/mensajesas/messages', async (req, res) => {
 });
 
 // Ruta para obtener el usuario loggeado
-app.get('/mensajesas/getLoggedInUser', (req, res) => {
+app.get('/getLoggedInUser', (req, res) => {
     res.json({ username: loggedInUser });
 });
 
-app.get('/mensajesas/', (req, res) => {
+app.get('/', (req, res) => {
     console.log("redireccionado a login")
     res.sendFile(path.join(__dirname, 'views', 'login.html'));
 });
 // Definir ruta para la página principal (inicio de sesión / registro)
-app.get('/mensajesas/login', (req, res) => {
+app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'login.html'));
 });
 // Ruta para el dashboard
-app.get('/mensajesas/dashboard', (req, res) => {
+app.get('/dashboard', (req, res) => {
     // Verificar si hay una sesión iniciada
     if (req.session.loggedInUser) {
         // Si hay una sesión iniciada, redirigir al dashboard
@@ -239,11 +255,11 @@ app.get('/mensajesas/dashboard', (req, res) => {
         res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
     } else {
         // Si no hay una sesión iniciada, redirigir al inicio de sesión u otra página
-        res.redirect('/mensajesas/login'); // Puedes ajustar esto según tus necesidades
+        res.redirect('/login'); // Puedes ajustar esto según tus necesidades
     }
 });
 
-app.post('/mensajesas/logout', (req, res) => {
+app.post('/logout', (req, res) => {
     // Limpiar la sesión
     loggedInUser=null
     req.session.destroy(err => {
@@ -255,7 +271,7 @@ app.post('/mensajesas/logout', (req, res) => {
         }
     });
 });
-app.post('/mensajesas/messagesMQTT', (req, res) => {
+app.post('/messagesMQTT', (req, res) => {
     try {
         const { mensaje, server, loggedInUser } = req.body;
         console.log("Intentando conectar al servidor MQTT...");

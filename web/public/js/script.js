@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 function sendMessage(message) {
-    fetch('/mensajesas/messages', {
+    fetch('/messages', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -77,7 +77,7 @@ function sendMessage(message) {
 }
 function sendMessageMqtt(message) {
     var server = document.getElementById('mqttServer').value;  // Obtener el valor del campo de servidor
-    fetch('/mensajesas/messagesMQTT', {
+    fetch('/messagesMQTT', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -99,7 +99,7 @@ function sendMessageMqtt(message) {
 }
 
 function getMessages() {
-    fetch('/mensajesas/messages')
+    fetch('/messages')
         .then(response => response.json())
         .then(data => {
             showMessages(data);
@@ -122,7 +122,7 @@ function showMessages(messages) {
 
 
 function handleLogin(username, password) {
-    fetch('/mensajesas/login', {
+    fetch('/login', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -149,7 +149,7 @@ function handleLogin(username, password) {
 }
 
 function handleRegister(username, password) {
-    fetch('/mensajesas/register', {
+    fetch('/register', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -176,7 +176,7 @@ function handleRegister(username, password) {
 }
 
 function getLoggedInUser() {
-    fetch('/mensajesas/getLoggedInUser')
+    fetch('/getLoggedInUser')
         .then(response => response.json())
         .then(data => {
             console.log('Usuario loggeado:', data.username);
@@ -187,7 +187,7 @@ function getLoggedInUser() {
 }
 
 function handleLogout() {
-    fetch('/mensajesas/logout', {
+    fetch('/logout', {
         method: 'POST'
     })
     .then(response => response.json())
@@ -205,7 +205,7 @@ function handleLogout() {
 }
 function handleDashboard() {
     // Realizar la solicitud al servidor para obtener el contenido del dashboard
-    fetch('/mensajesas/dashboard')
+    fetch('/dashboard')
         .then(response => response.text())
         .then(html => {
             // Limpiar el contenido actual del cuerpo de la página
