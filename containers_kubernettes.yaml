@@ -32,6 +32,8 @@ spec:
               value: "web_admin"
             - name: MYSQL_PASSWORD
               value: "admin_sistemas"
+          ports:
+            - containerPort: 3306  # Puerto MySQL
           volumeMounts:
             - name: mysql-persistent-storage
               mountPath: /var/lib/mysql
@@ -63,7 +65,7 @@ spec:
           ports:
             - containerPort: 3000
           env:
-            # Add any environment variables if needed
+
 
 ---
 
@@ -85,7 +87,7 @@ spec:
       containers:
         - name: sentimentalist
           image: erfosi/administracion_sentimentalist:latest
-          # Add any configuration for the Flask app if needed
+
 
 ---
 
