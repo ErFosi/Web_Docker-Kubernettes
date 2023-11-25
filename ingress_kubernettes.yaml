@@ -5,7 +5,7 @@ metadata:
   namespace: mensajesas
 spec:
   rules:
-      http:
+    - http:
         paths:
           - path: /
             pathType: Prefix
@@ -28,4 +28,5 @@ spec:
                 name: phpmyadmin-service
                 port:
                   number: 80
+
 
