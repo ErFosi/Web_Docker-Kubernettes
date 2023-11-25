@@ -11,20 +11,20 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: mensajesas-service
+                name: mensajesas-deployment
                 port:
                   number: 3000
           - path: /mosquitto
             pathType: Prefix
             backend:
               service:
-                name: mosquitto-service
+                name: mosquitto-deployment
                 port:
                   number: 1883
           - path: /phpmyadmin
             pathType: Prefix
             backend:
               service:
-                name: phpmyadmin-service
+                name: phpmyadmin-deployment
                 port:
                   number: 80
