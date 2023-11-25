@@ -87,6 +87,8 @@ spec:
       containers:
         - name: sentimentalist
           image: erfosi/administracion_sentimentalist:latest
+          ports:
+            - containerPort: 5000
 
 
 ---
