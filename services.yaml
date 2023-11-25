@@ -15,7 +15,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mosquitto
+  name: mosquitto-container
   namespace: mensajesas
 spec:
   selector:
@@ -43,7 +43,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: sentimentalist
+  name: sentimentalist-container
   namespace: mensajesas
 spec:
   selector:

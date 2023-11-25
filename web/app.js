@@ -46,7 +46,7 @@ const connectWithRetry = () => {
 
 // Iniciar la conexión con reintento
 connectWithRetry();
-const mqttClient = mqtt.connect('mqtt://mosquitto_container');  // Usa el nombre del contenedor Mosquitto
+const mqttClient = mqtt.connect('mqtt://mosquitto-container');  // Usa el nombre del contenedor Mosquitto
 mqttClient.subscribe('mensajes');
 mqttClient.on('message', async (topic, message) => {
     try {
@@ -89,7 +89,7 @@ mqttClient.on('message', async (topic, message) => {
     }
 });
 const analyzeSentiment = async (message) => {
-    return axios.post('http://sentimentalist_container:5000/analyze_sentiment', { message })
+    return axios.post('http://sentimentalist-container:5000/analyze_sentiment', { message })
         .then(response => response.data.sentiment)
         .catch(error => {
             console.error('Error al enviar mensaje a Python:', error);
