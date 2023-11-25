@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-configmap
+  namespace: mensajesas
+data:
+  mosquitto.conf: |
+    # mosquitto.conf
+    
+    # Configuración básica del servidor
+    listener 1883
+    
+    # Configuración del protocolo websockets
+    # listener 9001
+    
+    # Configuración del tópico "mensajes"
+    allow_anonymous true
+    # topic mensajes in

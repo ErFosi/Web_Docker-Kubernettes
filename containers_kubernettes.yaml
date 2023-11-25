@@ -1,0 +1,150 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mensajesas
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+  namespace: mensajesas
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:latest
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "estoNoSeMira"
+            - name: MYSQL_DATABASE
+              value: "mensajes"
+            - name: MYSQL_USER
+              value: "web_admin"
+            - name: MYSQL_PASSWORD
+              value: "admin_sistemas"
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+
+      volumes:
+        - name: mysql-persistent-storage
+          emptyDir: {}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mensajesas-deployment
+  namespace: mensajesas
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mensajesas
+  template:
+    metadata:
+      labels:
+        app: mensajesas
+    spec:
+      containers:
+        - name: mensajesas
+          image: erfosi/administracion_mensajesas:latest
+          ports:
+            - containerPort: 3000
+          env:
+            # Add any environment variables if needed
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentimentalist-deployment
+  namespace: mensajesas
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentimentalist
+  template:
+    metadata:
+      labels:
+        app: sentimentalist
+    spec:
+      containers:
+        - name: sentimentalist
+          image: erfosi/administracion_sentimentalist:latest
+          # Add any configuration for the Flask app if needed
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto-deployment
+  namespace: mensajesas
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto
+          ports:
+            - containerPort: 1883
+          volumeMounts:
+            - name: config-volume
+              mountPath: /mosquitto/config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: mosquitto-configmap
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phpmyadmin-deployment
+  namespace: mensajesas
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phpmyadmin
+  template:
+    metadata:
+      labels:
+        app: phpmyadmin
+    spec:
+      containers:
+        - name: phpmyadmin
+          image: phpmyadmin/phpmyadmin
+          ports:
+            - containerPort: 80
+          env:
+            - name: PMA_ARBITRARY
+              value: "1"
+            - name: PMA_HOST
+              value: "mysql"
+            - name: PMA_USER
+              value: "web_admin"
+            - name: PMA_PASSWORD
+              value: "admin_sistemas"

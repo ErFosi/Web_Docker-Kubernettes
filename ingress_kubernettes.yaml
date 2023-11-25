@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress
+  namespace: mensajesas
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /*
+            pathType: Prefix
+            backend:
+              service:
+                name: mensajesas-service
+                port:
+                  number: 3000
+          - path: /mosquitto
+            pathType: Prefix
+            backend:
+              service:
+                name: mosquitto-service
+                port:
+                  number: 1883
+          - path: /phpmyadmin
+            pathType: Prefix
+            backend:
+              service:
+                name: phpmyadmin-service
+                port:
+                  number: 80
