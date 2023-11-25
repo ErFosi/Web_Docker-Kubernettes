@@ -33,7 +33,7 @@ services:
  # Contenedor de tu aplicación Python con Flask
   sentimentalist:
     image: erfosi/administracion_sentimentalist:latest 
-    container_name: sentimentalist_container
+    container_name: sentimentalist-container
     networks:
       - my_network
     depends_on:
@@ -41,7 +41,7 @@ services:
   # Contenedor de Mosquitto
   mosquitto:
     image: eclipse-mosquitto
-    container_name: mosquitto_container
+    container_name: mosquitto-container
     links:
       - mysql
     labels:
