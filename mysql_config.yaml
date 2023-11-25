@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-scripts
+  namespace: mensajesas
+data:
+  init.sql: |-
+  -- Cambiar la autenticación para el usuario web_admin
+    ALTER USER 'web_admin' IDENTIFIED WITH mysql_native_password BY 'admin_sistemas';
+    FLUSH PRIVILEGES;
+
+    -- Crear tabla de usuarios
+    CREATE TABLE usuarios (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        usuario VARCHAR(255) NOT NULL,
+        contrasena VARCHAR(255) NOT NULL
+    );
+
+    -- Insertar usuarios de ejemplo
+    INSERT INTO usuarios (usuario, contrasena) VALUES
+        ('usuario1', 'contrasena1'),
+        ('usuario2', 'contrasena2');
+
+    -- Crear tabla de mensajes con columna de sentimiento
+    CREATE TABLE mensajes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        autor VARCHAR(255) NOT NULL,
+        mensaje TEXT NOT NULL,
+        sentimiento VARCHAR(20) -- Agregamos la columna de sentimiento
+    );
+
+    -- Insertar mensajes de ejemplo con sentimientos
+    INSERT INTO mensajes (autor, mensaje, sentimiento) VALUES
+        ('Usuario1', 'Hola, este es un mensaje de prueba.', 'positivo'),
+        ('Usuario2', 'Otro mensaje de prueba.', 'neutral');
