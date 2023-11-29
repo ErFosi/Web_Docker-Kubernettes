@@ -29,20 +29,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: phpmyadmin-service
-  namespace: mensajesas
-spec:
-  selector:
-    app: phpmyadmin
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 80
-  type: ClusterIP
----
-apiVersion: v1
-kind: Service
-metadata:
   name: sentimentalist-container
   namespace: mensajesas
 spec:

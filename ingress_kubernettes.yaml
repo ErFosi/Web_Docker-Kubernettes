@@ -21,12 +21,6 @@ spec:
                 name: mosquitto-service
                 port:
                   number: 1883
-          - path: /phpmyadmin
-            pathType: Prefix
-            backend:
-              service:
-                name: phpmyadmin-service
-                port:
-                  number: 80
+
 
 
