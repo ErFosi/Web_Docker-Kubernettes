@@ -43,7 +43,9 @@ spec:
 
       volumes:
         - name: mysql-persistent-storage
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: mysql-pvc  # Nombre del PersistentVolumeClaim (PVC)
+
         - name: init-scripts
           configMap:
             name: mysql-init-scripts
