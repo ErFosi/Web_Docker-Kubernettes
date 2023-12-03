@@ -54,7 +54,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mensajesas-deployment
+  name: mensajesas
   namespace: mensajesas
 spec:
   replicas: 1
