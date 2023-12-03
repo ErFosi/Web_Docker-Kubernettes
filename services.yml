@@ -24,7 +24,7 @@ spec:
     - protocol: TCP
       port: 1883
       targetPort: 1883
-  type: NodePort  # Change the service type to NodePort
+  type: LoadBalancer  # Change the service type to NodePort
 ---
 apiVersion: v1
 kind: Service
