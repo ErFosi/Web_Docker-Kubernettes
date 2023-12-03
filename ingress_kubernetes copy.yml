@@ -14,7 +14,13 @@ spec:
                 name: mensajesas-service
                 port:
                   number: 3000
-
+          - path: /mosquitto
+            pathType: Prefix
+            backend:
+              service:
+                name: mosquitto-container
+                port:
+                  number: 1883
 
 
 
