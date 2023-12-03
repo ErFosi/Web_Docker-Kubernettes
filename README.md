@@ -36,7 +36,7 @@ Para lanzar la aplicación en Kubernetes, se utilizan varios archivos YAML que d
 - **persistant.yml:**
   Hace el claim del volumen persistente usado en la base por MySQL.
 
-  Para lanzar la aplicación en Kubernetes, es necesario aplicar estos archivos YAML utilizando el siguiente comando para cada uno. Una vez desplegados, los servicios estarán disponibles en el clúster.
+  Para lanzar la aplicación en Kubernetes, es necesario aplicar estos archivos YAML utilizando el siguiente comando para cada uno. Una vez desplegados, los servicios estarán disponibles en el clúster. El servicio de la web escucha por el puerto 3000, esto se puede mirar en los servicios.
 
 ```bash
 kubectl apply -f containers_kubernetes.yml
